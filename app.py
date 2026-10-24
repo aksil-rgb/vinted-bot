@@ -1,8 +1,8 @@
-import os
+mport os
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 import threading
 import telebot
-import requests
+import cloudscraper
 
 # --- 1. Le serveur HTTP pour valider le port Render (obligatoire) ---
 def run_http_server():
@@ -15,37 +15,36 @@ def run_http_server():
 # Lancement du serveur en arrière-plan
 threading.Thread(target=run_http_server, daemon=True).start()
 
-# --- 2. Ton Bot Telegram & Logique de Sniper ---
+# --- 2. Ton Bot Telegram & Logique de Sniper Anti-Cloudflare ---
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(message, "Salut ! 🚀 Envoie-moi un mot-clé (ex: Airmax, PS4...) et je lance le sniper Vinted !")
+    bot.reply_to(message, "Salut ! 🚀 Le sniper Vinted ultime est en ligne. Envoie-moi un mot-clé (ex: Airmax, PS4...) !")
 
 @bot.message_handler(func=lambda message: True)
 def search_vinted(message):
     query = message.text
-    bot.reply_to(message, f"🔍 Recherche en cours pour : *{query}*...", parse_mode="Markdown")
+    bot.reply_to(message, f"🔍 Recherche blindée en cours pour : *{query}*...", parse_mode="Markdown")
     
     try:
-        session = requests.Session()
+        # Création d'un scraper capable de contourner Cloudflare
+        scraper = cloudscraper.create_scraper(
+            browser={
+                'browser': 'chrome',
+                'platform': 'windows',
+                'desktop': True
+            }
+        )
         
-        # En-têtes imitant l'application mobile / client lourd pour passer les filtres
-        headers = {
-            "User-Agent": "Vinted/22.8.1 (fr.vinted; build:22810; Android 11)",
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "fr-FR,fr;q=0.9",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive"
-        }
-        
-        # Appel direct à l'API catalogue Vinted avec les bons paramètres de recherche
+        # URL de l'API catalogue Vinted optimisée
         url = f"https://www.vinted.fr/api/v2/catalog/items?search_text={query}&per_page=3&order=newest_first"
-        response = session.get(url, headers=headers, timeout=10)
+        
+        response = scraper.get(url, timeout=15)
         
         if response.status_code != 200:
-            bot.reply_to(message, f"❌ Vinted a bloqué la requête (Code {response.status_code}).")
+            bot.reply_to(message, f"❌ Vinted résiste encore (Code {response.status_code}).")
             return
 
         data = response.json()
@@ -55,7 +54,7 @@ def search_vinted(message):
             bot.reply_to(message, "Aucun article trouvé pour cette recherche.")
             return
             
-        result_text = f"🔥 **Dernières trouvailles pour : {query}** :\n\n"
+        result_text = f"🔥 **Top 3 des résultats pour : {query}** :\n\n"
         for item in items:
             title = item.get("title", "Sans titre")
             price = item.get("price", "N/C")
@@ -68,7 +67,7 @@ def search_vinted(message):
         bot.reply_to(message, result_text, parse_mode="Markdown", disable_web_page_preview=True)
         
     except Exception as e:
-        bot.reply_to(message, f"❌ Une erreur est survenue lors de la récupération des données.")
+        bot.reply_to(message, f"❌ Erreur technique lors du contournement.")
 
-print("Le bot Telegram démarre...")
+print("Le bot Telegram démarre avec Cloudscraper...")
 bot.infinity_polling()
