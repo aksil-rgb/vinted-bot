@@ -21,23 +21,35 @@ bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(message, "Salut ! 🚀 Envoie-moi un mot-clé (ex: Airmax, Nike, Sweat...) et je cherche les derniers articles sur Vinted pour toi !")
+    bot.reply_to(message, "Salut ! 🚀 Envoie-moi un mot-clé (ex: Airmax, PS4, Sweat...) et je cherche les derniers articles sur Vinted pour toi !")
 
-# Gestion des messages texte (Recherche Vinted)
+# Gestion des messages texte (Recherche Vinted avec Session pour contourner les protections)
 @bot.message_handler(func=lambda message: True)
 def search_vinted(message):
     query = message.text
     bot.reply_to(message, f"🔍 Recherche en cours pour : *{query}*...", parse_mode="Markdown")
     
     try:
-        # Requête vers l'API de Vinted
-        url = f"https://www.vinted.fr/api/v2/catalog/items?search_text={query}&per_page=3"
+        # Création d'une session pour imiter un vrai navigateur
+        session = requests.Session()
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "fr-FR,fr;q=0.9",
+            "Accept": "application/json, text/plain, */*"
         }
-        response = requests.get(url, headers=headers)
-        data = response.json()
         
+        # Étape 1 : Visiter la page d'accueil pour récupérer les cookies de session
+        session.get("https://www.vinted.fr", headers=headers, timeout=10)
+        
+        # Étape 2 : Interroger l'API avec la session active
+        url = f"https://www.vinted.fr/api/v2/catalog/items?search_text={query}&per_page=3"
+        response = session.get(url, headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            bot.reply_to(message, f"❌ Vinted a bloqué la requête (Code {response.status_code}).")
+            return
+
+        data = response.json()
         items = data.get("items", [])
         
         if not items:
@@ -58,7 +70,7 @@ def search_vinted(message):
         bot.reply_to(message, result_text, parse_mode="Markdown", disable_web_page_preview=True)
         
     except Exception as e:
-        bot.reply_to(message, f"❌ Oups, une petite erreur est survenue lors de la recherche.")
+        bot.reply_to(message, f"❌ Oups, une erreur technique est survenue.")
 
 print("Le bot Telegram démarre...")
 bot.infinity_polling()
