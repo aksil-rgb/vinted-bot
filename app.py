@@ -7,7 +7,7 @@ from threading import Thread
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
-# Mini serveur web pour faire plaisir à Render
+# Mini serveur web local
 app = Flask('')
 
 @app.route('/')
@@ -21,19 +21,18 @@ def run_flask():
 @bot.message_handler(func=lambda message: True)
 def search_vinted(message):
     query = message.text
-    bot.reply_to(message, f"🔍 Test du proxy pour : *{query}*...", parse_mode="Markdown")
+    bot.reply_to(message, f"🔍 Recherche en cours pour : *{query}*...", parse_mode="Markdown")
     
     try:
         scraper = cloudscraper.create_scraper()
         
-        proxies = None
-        
         url = f"https://www.vinted.fr/api/v2/catalog/items?search_text={query}&per_page=3&order=newest_first"
         
-        response = scraper.get(url, proxies=proxies, timeout=10)
+        # Requête directe via la connexion locale de ton téléphone
+        response = scraper.get(url, timeout=10)
         
         if response.status_code != 200:
-            bot.reply_to(message, f"❌ Échec (Code {response.status_code}). Le proxy est mort ou bloqué par Cloudflare.")
+            bot.reply_to(message, f"❌ Échec (Code {response.status_code}). Vinted ou Cloudflare a bloqué la requête.")
             return
 
         data = response.json()
@@ -54,7 +53,7 @@ def search_vinted(message):
         bot.reply_to(message, result_text, parse_mode="Markdown", disable_web_page_preview=True)
         
     except Exception as e:
-        bot.reply_to(message, f"❌ Erreur de connexion : le proxy ne répond pas.")
+        bot.reply_to(message, f"❌ Erreur de connexion avec Vinted : {e}")
 
 if __name__ == "__main__":
     # Lance le serveur web en arrière-plan
@@ -62,3 +61,4 @@ if __name__ == "__main__":
     t.start()
     # Lance le bot Telegram
     bot.infinity_polling()
+
