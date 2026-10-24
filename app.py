@@ -1,9 +1,22 @@
 import os
 import telebot
 import cloudscraper
+from flask import Flask
+from threading import Thread
 
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 bot = telebot.TeleBot(TOKEN)
+
+# Mini serveur web pour faire plaisir à Render
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is alive!"
+
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
 
 @bot.message_handler(func=lambda message: True)
 def search_vinted(message):
@@ -13,14 +26,12 @@ def search_vinted(message):
     try:
         scraper = cloudscraper.create_scraper()
         
-        # ⚠️ C'est ici qu'on met l'IP et le port du proxy gratuit
         proxies = {
             'https': 'http://195.154.191.26:1099'
         }
         
         url = f"https://www.vinted.fr/api/v2/catalog/items?search_text={query}&per_page=3&order=newest_first"
         
-        # On passe le proxy à la requête
         response = scraper.get(url, proxies=proxies, timeout=10)
         
         if response.status_code != 200:
@@ -46,3 +57,10 @@ def search_vinted(message):
         
     except Exception as e:
         bot.reply_to(message, f"❌ Erreur de connexion : le proxy ne répond pas.")
+
+if __name__ == "__main__":
+    # Lance le serveur web en arrière-plan
+    t = Thread(target=run_flask)
+    t.start()
+    # Lance le bot Telegram
+    bot.infinity_polling()
