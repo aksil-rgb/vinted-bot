@@ -26,9 +26,7 @@ def search_vinted(message):
     try:
         scraper = cloudscraper.create_scraper()
         
-        proxies = {
-            'https': 'http://195.154.191.26:1099'
-        }
+        proxies = none
         
         url = f"https://www.vinted.fr/api/v2/catalog/items?search_text={query}&per_page=3&order=newest_first"
         
