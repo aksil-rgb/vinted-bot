@@ -21,7 +21,7 @@ bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(message, "Salut ! 🚀 Envoie-moi un mot-clé (ex: Airmax, PS4...) et je cherche sur Vinted !")
+    bot.reply_to(message, "Salut ! 🚀 Envoie-moi un mot-clé (ex: Airmax, PS4...) et je lance le sniper Vinted !")
 
 @bot.message_handler(func=lambda message: True)
 def search_vinted(message):
@@ -31,27 +31,21 @@ def search_vinted(message):
     try:
         session = requests.Session()
         
-        # En-têtes renforcés pour simuler un vrai navigateur
+        # En-têtes imitant l'application mobile / client lourd pour passer les filtres
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "User-Agent": "Vinted/22.8.1 (fr.vinted; build:22810; Android 11)",
             "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Referer": "https://www.vinted.fr/",
-            "Origin": "https://www.vinted.fr/",
-            "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
-            "Sec-Ch-Ua-Mobile": "?0",
-            "Sec-Ch-Ua-Platform": '"Windows"'
+            "Accept-Language": "fr-FR,fr;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive"
         }
         
-        # Visiter la page d'accueil pour récupérer les cookies de session
-        session.get("https://www.vinted.fr", headers=headers, timeout=10)
-        
-        # Requête vers l'API catalogue
-        url = f"https://www.vinted.fr/api/v2/catalog/items?search_text={query}&per_page=3"
+        # Appel direct à l'API catalogue Vinted avec les bons paramètres de recherche
+        url = f"https://www.vinted.fr/api/v2/catalog/items?search_text={query}&per_page=3&order=newest_first"
         response = session.get(url, headers=headers, timeout=10)
         
         if response.status_code != 200:
-            bot.reply_to(message, f"❌ Vinted bloque toujours l'accès (Code {response.status_code}).")
+            bot.reply_to(message, f"❌ Vinted a bloqué la requête (Code {response.status_code}).")
             return
 
         data = response.json()
@@ -61,7 +55,7 @@ def search_vinted(message):
             bot.reply_to(message, "Aucun article trouvé pour cette recherche.")
             return
             
-        result_text = f"✨ **Top 3 des résultats pour : {query}** :\n\n"
+        result_text = f"🔥 **Dernières trouvailles pour : {query}** :\n\n"
         for item in items:
             title = item.get("title", "Sans titre")
             price = item.get("price", "N/C")
@@ -74,7 +68,7 @@ def search_vinted(message):
         bot.reply_to(message, result_text, parse_mode="Markdown", disable_web_page_preview=True)
         
     except Exception as e:
-        bot.reply_to(message, f"❌ Une erreur technique est survenue.")
+        bot.reply_to(message, f"❌ Une erreur est survenue lors de la récupération des données.")
 
 print("Le bot Telegram démarre...")
 bot.infinity_polling()
