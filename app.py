@@ -62,3 +62,4 @@ if __name__ == "__main__":
     # Lance le bot Telegram
     bot.infinity_polling()
 
+
