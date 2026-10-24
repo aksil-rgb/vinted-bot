@@ -1,4 +1,4 @@
-mport os
+import os
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 import threading
 import telebot
